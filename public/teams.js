@@ -1,0 +1,38 @@
+// NFL team identifiers and colors, generated once from ESPN's public teams feed.
+// abbr/name/short identify real games (factual use). Themes never show team names or logos:
+// they use our own theme names, a colors label and the city. No logos or other team art are used.
+export const TEAMS = [
+  { abbr: 'ARI', name: 'Arizona Cardinals', short: 'Cardinals', city: 'Arizona', theme: "Desert Flare", colors: 'Red & White', color: '#a40227', alt: '#ffffff' },
+  { abbr: 'ATL', name: 'Atlanta Falcons', short: 'Falcons', city: 'Atlanta', theme: "Red Clay Night", colors: 'Red & Black', color: '#a71930', alt: '#000000' },
+  { abbr: 'BAL', name: 'Baltimore Ravens', short: 'Ravens', city: 'Baltimore', theme: "Midnight Plum", colors: 'Purple & Black', color: '#29126f', alt: '#000000' },
+  { abbr: 'BUF', name: 'Buffalo Bills', short: 'Bills', city: 'Buffalo', theme: "Lake Effect", colors: 'Royal Blue & Red', color: '#00338d', alt: '#d50a0a' },
+  { abbr: 'CAR', name: 'Carolina Panthers', short: 'Panthers', city: 'Carolina', theme: "Blue Current", colors: 'Blue & Black', color: '#0085ca', alt: '#000000' },
+  { abbr: 'CHI', name: 'Chicago Bears', short: 'Bears', city: 'Chicago', theme: "Lakefront Navy", colors: 'Navy & Orange', color: '#0b1c3a', alt: '#e64100' },
+  { abbr: 'CIN', name: 'Cincinnati Bengals', short: 'Bengals', city: 'Cincinnati', theme: "Hot Ember", colors: 'Orange & Black', color: '#fb4f14', alt: '#000000' },
+  { abbr: 'CLE', name: 'Cleveland Browns', short: 'Browns', city: 'Cleveland', theme: "Autumn Leather", colors: 'Brown & Orange', color: '#472a08', alt: '#ff3c00' },
+  { abbr: 'DAL', name: 'Dallas Cowboys', short: 'Cowboys', city: 'Dallas', theme: "Silver Prairie", colors: 'Navy & Silver', color: '#002a5c', alt: '#b0b7bc' },
+  { abbr: 'DEN', name: 'Denver Broncos', short: 'Broncos', city: 'Denver', theme: "Rocky Dusk", colors: 'Navy & Orange', color: '#0a2343', alt: '#fc4c02' },
+  { abbr: 'DET', name: 'Detroit Lions', short: 'Lions', city: 'Detroit', theme: "Glacier Blue", colors: 'Blue & Silver', color: '#0076b6', alt: '#bbbbbb' },
+  { abbr: 'GB', name: 'Green Bay Packers', short: 'Packers', city: 'Green Bay', theme: "Evergreen Gold", colors: 'Green & Gold', color: '#204e32', alt: '#ffb612' },
+  { abbr: 'HOU', name: 'Houston Texans', short: 'Texans', city: 'Houston', theme: "Bayou Night", colors: 'Deep Navy & Red', color: '#021018', alt: '#eb0028' },
+  { abbr: 'IND', name: 'Indianapolis Colts', short: 'Colts', city: 'Indianapolis', theme: "Crossroads Blue", colors: 'Blue & White', color: '#003b75', alt: '#ffffff' },
+  { abbr: 'JAX', name: 'Jacksonville Jaguars', short: 'Jaguars', city: 'Jacksonville', theme: "River Teal", colors: 'Teal & Gold', color: '#007487', alt: '#d7a22a' },
+  { abbr: 'KC', name: 'Kansas City Chiefs', short: 'Chiefs', city: 'Kansas City', theme: "Prairie Fire", colors: 'Red & Gold', color: '#e31837', alt: '#ffb612' },
+  { abbr: 'LV', name: 'Las Vegas Raiders', short: 'Raiders', city: 'Las Vegas', theme: "Silver Night", colors: 'Black & Silver', color: '#000000', alt: '#a5acaf' },
+  { abbr: 'LAC', name: 'Los Angeles Chargers', short: 'Chargers', city: 'Los Angeles', theme: "Coastline", colors: 'Powder Blue & Gold', color: '#0080c6', alt: '#ffc20e' },
+  { abbr: 'LAR', name: 'Los Angeles Rams', short: 'Rams', city: 'Los Angeles', theme: "Golden Hour", colors: 'Royal Blue & Yellow', color: '#003594', alt: '#ffd100' },
+  { abbr: 'MIA', name: 'Miami Dolphins', short: 'Dolphins', city: 'Miami', theme: "Aqua Sunset", colors: 'Aqua & Orange', color: '#008e97', alt: '#fc4c02' },
+  { abbr: 'MIN', name: 'Minnesota Vikings', short: 'Vikings', city: 'Minnesota', theme: "Northern Aurora", colors: 'Purple & Gold', color: '#4f2683', alt: '#ffc62f' },
+  { abbr: 'NE', name: 'New England Patriots', short: 'Patriots', city: 'New England', theme: "Nor'easter", colors: 'Navy & Red', color: '#002a5c', alt: '#c60c30' },
+  { abbr: 'NO', name: 'New Orleans Saints', short: 'Saints', city: 'New Orleans', theme: "Old Gold", colors: 'Gold & Black', color: '#d3bc8d', alt: '#000000' },
+  { abbr: 'NYG', name: 'New York Giants', short: 'Giants', city: 'New York', theme: "Empire Navy", colors: 'Navy & Red', color: '#003c7f', alt: '#c9243f' },
+  { abbr: 'NYJ', name: 'New York Jets', short: 'Jets', city: 'New York', theme: "Garden Green", colors: 'Green & White', color: '#115740', alt: '#ffffff' },
+  { abbr: 'PHI', name: 'Philadelphia Eagles', short: 'Eagles', city: 'Philadelphia', theme: "Liberty Pine", colors: 'Pine Green & Silver', color: '#06424d', alt: '#000000' },
+  { abbr: 'PIT', name: 'Pittsburgh Steelers', short: 'Steelers', city: 'Pittsburgh', theme: "Forge", colors: 'Black & Gold', color: '#000000', alt: '#ffb612' },
+  { abbr: 'SF', name: 'San Francisco 49ers', short: '49ers', city: 'San Francisco', theme: "Cable Car Red", colors: 'Red & Gold', color: '#aa0000', alt: '#b3995d' },
+  { abbr: 'SEA', name: 'Seattle Seahawks', short: 'Seahawks', city: 'Seattle', theme: "Puget Rain", colors: 'Navy & Green', color: '#002a5c', alt: '#69be28' },
+  { abbr: 'TB', name: 'Tampa Bay Buccaneers', short: 'Buccaneers', city: 'Tampa Bay', theme: "Gulf Ember", colors: 'Red & Pewter', color: '#bd1c36', alt: '#3e3a35' },
+  { abbr: 'TEN', name: 'Tennessee Titans', short: 'Titans', city: 'Tennessee', theme: "River Blue", colors: 'Light Blue & Navy', color: '#4495d2', alt: '#001532' },
+  { abbr: 'WSH', name: 'Washington Commanders', short: 'Commanders', city: 'Washington', theme: "Monument", colors: 'Burgundy & Gold', color: '#5a1414', alt: '#ffb612' },
+];
+export const teamByAbbr = (abbr) => TEAMS.find((t) => t.abbr === abbr) || null;

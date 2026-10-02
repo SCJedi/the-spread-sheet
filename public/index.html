@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#6100c9">
+  <meta name="color-scheme" content="light dark">
+  <title>The Spread Sheet</title>
+  <meta name="description" content="The Spread Sheet: your picks sheet, minus the spreadsheet. Free, open-source weekly picks with friends. Made by Infinite Visions AI.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%236100c9'/><stop offset='1' stop-color='%23e70075'/></linearGradient></defs><rect width='64' height='64' rx='16' fill='url(%23g)'/><ellipse cx='32' cy='32' rx='21' ry='12' fill='%23fff' transform='rotate(-35 32 32)'/><path d='M25 39 39 25M28 32l4 4M32 28l4 4' stroke='%236100c9' stroke-width='3' stroke-linecap='round'/></svg>">
+  <!-- Paint the visitor's last theme before anything else loads, so colors never flash. theme.js keeps this cache fresh. -->
+  <script>
+    try {
+      var t = JSON.parse(localStorage.getItem('sp_theme_vars'));
+      if (t) {
+        var r = document.documentElement;
+        for (var k in t.vars) r.style.setProperty(k, t.vars[k]);
+        r.style.colorScheme = t.mode; r.dataset.mode = t.mode;
+        document.querySelector('meta[name="theme-color"]').content = t.meta;
+      }
+    } catch (e) {}
+  </script>
+  <link rel="preload" href="/fonts/barlow-condensed-800.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-row">
+      <a href="#/" class="brand" id="brand"><i class="dot"></i><span>The Spread Sheet</span></a>
+      <nav id="nav" aria-label="Main"></nav>
+      <button class="iconbtn" id="themeBtn" aria-label="Change theme" title="Theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="9.5" r="5.2"/><circle cx="15" cy="9.5" r="5.2"/><circle cx="12" cy="14.6" r="5.2"/></svg>
+      </button>
+    </div>
+  </header>
+  <main class="wrap" id="app"><p class="muted">Loading…</p></main>
+  <footer class="wrap foot" id="footer"></footer>
+  <dialog class="sheet" id="themes" aria-labelledby="themesTitle"></dialog>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
