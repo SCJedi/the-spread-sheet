@@ -1,0 +1,211 @@
+========================================================================
+                          THE SPREAD SHEET
+              Your picks sheet, minus the spreadsheet.
+========================================================================
+
+Hi! This is a free website for picking games with friends and family.
+
+Everyone can look at the picks board. You do not need to log in to
+look. To make your own picks, you log in with a name and a secret
+number called a PIN. A PIN is 4 to 8 numbers.
+
+Picks lock when each game starts. Scores and winners fill in by
+themselves. No money. No betting. Just for fun.
+
+It is free. It runs on a free Cloudflare account. GitHub is free too.
+
+You can do this. Take your time. Ask a grown-up to help if you like.
+Do one step, then the next.
+
+
+------------------------------------------------------------------------
+HOW TO SET IT UP (about 10 minutes)
+------------------------------------------------------------------------
+
+STEP 1. Make a free GitHub account.
+
+   Go to this address:
+   https://github.com/signup
+
+   Then check your email and verify it.
+
+
+STEP 2. Make a free Cloudflare account.
+
+   Go to this address:
+   https://dash.cloudflare.com/sign-up
+
+   Check your email and verify it.
+   You do not need a credit card for the free plan.
+
+
+STEP 3. Click the "Deploy to Cloudflare" button.
+
+   The button is near the top of the project page:
+   https://github.com/SCJedi/the-spread-sheet
+
+
+STEP 4. Sign in and connect GitHub.
+
+   Cloudflare will ask you to sign in and connect GitHub.
+   Say yes. Let Cloudflare make a repository in your GitHub account.
+   It copies the project there for you.
+
+
+STEP 5. Keep the defaults on the setup page.
+
+   Do not change the project name, Worker name or database name.
+   Press the button that says: Create and deploy
+
+   Cloudflare makes the database for you.
+
+
+STEP 6. Wait about 1 to 3 minutes.
+
+   It is building your site. When it is done, Cloudflare shows
+   your site's address. It looks like this:
+
+   https://the-spread-sheet.<your-name>.workers.dev
+
+   The first time, Cloudflare may ask you to pick the <your-name>
+   part. This is called your workers.dev subdomain. Pick any short
+   name.
+
+
+STEP 7. Open your address.
+
+   You are the first one there, so you become the commissioner.
+   The commissioner is the boss of the pool.
+   Pick your display name and a PIN (4 to 8 numbers).
+   Write your PIN down somewhere safe.
+
+
+STEP 8. Invite everyone.
+
+   Go to Admin, then Players. Copy the invite link.
+   The join code is already inside it.
+   Text the link to your group.
+   They open it, pick a name and a PIN, and they are in.
+
+
+STEP 9. (You can skip this.)
+
+   Go to Admin, then Settings, to set the pool name, the theme, and
+   whether picks stay hidden until kickoff.
+   Go to Admin, then Data source, to choose where scores come from.
+
+
+ALL DONE!
+
+   The schedule, scores and winners update by themselves every
+   10 minutes. You do not have to do anything else.
+
+   Want pictures? Your new site has a picture guide at:
+   https://the-spread-sheet.<your-name>.workers.dev/setup-guide.html
+
+
+------------------------------------------------------------------------
+EVERY WEEK
+------------------------------------------------------------------------
+
+You do not have to do anything. The new week shows up by itself,
+around Wednesday.
+
+Want picks to open sooner? Go to Admin, then This week, then press
+"Load next week early".
+
+If a friend texts you their picks, you can type them in for them.
+Go to Admin, then Enter picks.
+
+
+------------------------------------------------------------------------
+IF SOMEONE FORGETS THEIR PIN
+------------------------------------------------------------------------
+
+A player forgot their PIN:
+
+   The commissioner fixes it. Go to Admin, then Players.
+   Press New PIN, type a new one, and press Save.
+
+The commissioner forgot their PIN:
+
+   That's okay. Here is how to get back in.
+
+   1. Go to https://dash.cloudflare.com
+      Click Workers & Pages.
+      Click your project. It is called the-spread-sheet.
+      Click Settings.
+      Click Variables and Secrets.
+      Click Add.
+
+   2. For the name, type:   RECOVERY_PIN
+      For the value, type a new PIN (4 to 8 numbers).
+      Save and deploy.
+
+   3. Open your site. Press Log in.
+      Type your commissioner name and that new PIN.
+      Now that is your PIN.
+
+   4. Go back to Cloudflare and delete RECOVERY_PIN.
+      Your site will remind you until you do.
+
+
+------------------------------------------------------------------------
+IF SOMETHING GOES WRONG
+------------------------------------------------------------------------
+
+It says "No games loaded yet" right after setup.
+   Wait one minute. Then refresh the page.
+
+The button says it can't find the repository.
+   The project must be public. Check the address is exactly:
+   https://github.com/SCJedi/the-spread-sheet
+
+Cloudflare asks for a workers.dev subdomain.
+   Pick any short name. It becomes part of your site address.
+
+The build failed.
+   Open the deployment in the Cloudflare dashboard.
+   Press "Retry deployment".
+   If it fails two times, open an issue on the GitHub project page.
+
+Someone typed the wrong PIN five times.
+   That name is locked for 15 minutes. Then they can try again.
+
+The scores stopped updating.
+   The automatic scores are not official, so they can stop.
+   Go to Admin, then Data source. Choose Manual, or your own feed.
+
+
+------------------------------------------------------------------------
+WHO MADE THIS
+------------------------------------------------------------------------
+
+The Spread Sheet is a free gift from Infinite Visions AI, a small
+team in Sarasota, Florida.
+
+We build the software your business actually needs.
+
+Want something like this for your business, club or team?
+Schedule a 20-min discovery call.
+
+Schedule a call:
+https://www.infinitevisionsaiagents.com/schedule.html
+
+Our website:
+https://www.infinitevisionsaiagents.com/
+
+Please keep the small "made by Infinite Visions AI" line at the
+bottom of your site. It helps people find us. Thank you.
+
+
+------------------------------------------------------------------------
+THE FINE PRINT
+------------------------------------------------------------------------
+
+Just for fun: no money is handled and nothing here is betting.
+Not affiliated with, endorsed by or sponsored by the NFL, any team,
+or ESPN. Team names and codes are used only to identify real games,
+and colors only to describe themes. No logos or team artwork are
+included. Provided as-is under the MIT License, (c) 2026 Infinite
+Visions AI LLC. Full text: NOTICE.md.

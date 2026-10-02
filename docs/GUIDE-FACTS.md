@@ -15,7 +15,7 @@ Every guide (README.md, START-HERE.txt, public/setup-guide.html, AGENTS.md, llms
 - Headline: "We build the software your business actually needs."
 - Call to action: "Schedule a 20-min discovery call": https://www.infinitevisionsaiagents.com/schedule.html
 - Site: https://www.infinitevisionsaiagents.com/
-- Every link to the maker's site adds `?utm_source=the-spread-sheet&utm_medium=<guide>&utm_campaign=giveaway`, where `<guide>` is `readme`, `start-here`, `setup-guide` or `agents`.
+- Every link to the maker's site adds `?utm_source=the-spread-sheet&utm_medium=<guide>&utm_campaign=giveaway`, where `<guide>` is `readme`, `setup-guide`, `agents` or `llms`. START-HERE.txt uses plain links with no tags, because it keeps lines to 72 characters and a tagged link would have to be split.
 - Text logo: "Infinite Visions **AI**" with "AI" in blue. Maker colors: blue #2563eb, sky #0ea5e9, navy #0f172a, light text #f1f5f9 and #cbd5e1. White text on #2563eb passes WCAG AA (5.2:1). #3b82f6 on white does not (3.7:1), so use #2563eb for blue text on white.
 - Product text logo: small "THE SPREAD" over a big bold "SHEET" with a colored underline.
 

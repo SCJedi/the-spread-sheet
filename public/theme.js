@@ -1,6 +1,6 @@
 // Theme engine. Turns a team's two brand colors into a full, accessible palette.
 //
-// The rules (checked for all 33 themes in light and dark by test/theme.test.js):
+// The rules (checked for all 34 themes in light and dark by test/theme.test.js):
 //   - Every text color reaches WCAG 2.2 AA contrast, 4.5:1, against the surface it sits on.
 //   - Buttons, borders and other UI parts reach 3:1 (WCAG 1.4.11).
 //   - Win/loss colors never change with the theme, and losses also get a shape cue (strikethrough),

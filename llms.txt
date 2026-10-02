@@ -1,0 +1,23 @@
+# The Spread Sheet
+
+> The Spread Sheet ("Your picks sheet, minus the spreadsheet.") is a free, open-source website for a weekly straight-up game-picks pool among friends, family or coworkers, made by Infinite Visions AI. Anyone can view the board without logging in; players log in with a name and a 4-8 digit PIN to make their own picks, which lock server-side at each game's kickoff. Scores and winners fill in automatically from ESPN's public scoreboard, a custom JSON feed, or manual entry. It runs on a free Cloudflare account (one Worker plus a D1 database, no build step), handles no money, and is not betting.
+
+## Guides
+
+- [README.md](README.md): overview, one-click Deploy to Cloudflare setup in 9 steps, features, recovery, troubleshooting and the developer path.
+- [START-HERE.txt](START-HERE.txt): the same setup in plain text at an early reading level, for people who can't open anything else.
+- [Setup guide](public/setup-guide.html): picture-by-picture interactive setup guide, also served at /setup-guide.html on every install.
+
+## Developers and AI agents
+
+- [AGENTS.md](AGENTS.md): architecture map, data model, request flow, invariants that must never break, how to test, deploy and extend.
+- [FEED.md](FEED.md): the custom data feed JSON format, URL placeholders and API-key handling.
+
+## Legal
+
+- [NOTICE.md](NOTICE.md): disclaimer (not affiliated with the NFL, any team or ESPN; no money handled), credits and third-party licenses.
+- [LICENSE](LICENSE): MIT License.
+
+## Optional
+
+- [Infinite Visions AI](https://www.infinitevisionsaiagents.com/?utm_source=the-spread-sheet&utm_medium=llms&utm_campaign=giveaway): the maker; custom software and AI agents for businesses.
