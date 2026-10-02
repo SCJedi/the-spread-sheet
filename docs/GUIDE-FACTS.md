@@ -8,6 +8,7 @@ Every guide (README.md, START-HERE.txt, public/setup-guide.html, AGENTS.md, llms
 - Promise: "Straight-up picks with friends. No spreadsheets, no betting."
 - What it is: a free, open-source website for a weekly game-picks pool among friends, family or coworkers. Everyone can view the board without logging in. Players log in with a name and a 4-8 digit PIN to make their own picks. Picks lock at each game's kickoff. Scores and winners fill in automatically.
 - It handles no money and is not betting. The pool calculator is just math in each viewer's browser.
+- Time: about 10 minutes, start to finish.
 - Cost: free. It runs on a free Cloudflare account; GitHub is also free.
 
 ## Maker (brand on every guide)
@@ -21,6 +22,7 @@ Every guide (README.md, START-HERE.txt, public/setup-guide.html, AGENTS.md, llms
 
 ## Links
 - Repo: https://github.com/SCJedi/the-spread-sheet
+- Notice (full disclaimer and credits): https://github.com/SCJedi/the-spread-sheet/blob/main/NOTICE.md
 - Deploy button (markdown):
   `[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/SCJedi/the-spread-sheet)`
 - Live demo: `{{DEMO_URL}}` (the address is not known yet; leave this placeholder exactly as written)
@@ -58,6 +60,8 @@ Players who forget their PIN ask the commissioner (Admin → Players → New PIN
 4. Go back and **delete** the `RECOVERY_PIN` variable. The site shows a reminder until you do.
 
 ## Troubleshooting (symptom → fix)
+- The verification email hasn't arrived → check the spam or junk folder, then wait a minute.
+- Already have a GitHub account → use it and skip to step 2. In step 4, sign in with the GitHub account from step 1.
 - "No games loaded yet" right after setup → wait one minute and refresh. The schedule loads on the first visit.
 - The button says the repository can't be found → the repo must be public; check the link is exactly the one above.
 - Cloudflare asks for a workers.dev subdomain → pick any short name; it becomes part of your site address.
