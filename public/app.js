@@ -142,8 +142,13 @@ const ICONS = {
 const icon = (name) => { const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); el.setAttribute('viewBox', '0 0 24 24'); el.setAttribute('fill', 'none'); el.setAttribute('stroke', 'currentColor'); el.setAttribute('stroke-width', '2'); el.setAttribute('stroke-linecap', 'round'); el.setAttribute('stroke-linejoin', 'round'); el.setAttribute('aria-hidden', 'true'); el.innerHTML = ICONS[name]; return el; };
 
 function render() {
-  document.title = S.league.name;
-  document.getElementById('brand').replaceChildren(h('i', { class: 'dot' }), h('span', {}, S.league.name));
+  // The product brand stays at the top of every page; the pool's own name sits beside it (unless it is the default).
+  const ownName = S.league.name && S.league.name !== BRAND.product;
+  document.title = ownName ? `${S.league.name} · ${BRAND.product}` : BRAND.product;
+  document.getElementById('brand').replaceChildren(
+    h('span', { class: 'wordmark hdr', 'aria-hidden': 'true' }, wordmark()),
+    h('span', { class: 'sr' }, BRAND.product),
+    ownName ? h('span', { class: 'league' }, S.league.name) : null);
   document.getElementById('footer').replaceChildren(disclaimer());
   const r = route();
   const link = (href, ic, long, short = long) => h('a', { href: '#' + href, class: r.path === href ? 'on' : '', 'aria-current': r.path === href ? 'page' : null },

@@ -58,9 +58,12 @@ p.small { margin: var(--sp-1) 0 var(--sp-3); max-width: 68ch; line-height: 1.45;
   box-shadow: 0 2px 0 var(--stripe), 0 8px 24px -12px var(--top);
 }
 .top-row { display: flex; align-items: center; gap: 10px; min-height: 58px; }
-.brand { color: inherit; text-decoration: none; font: 800 var(--fs-h2)/1 var(--display); letter-spacing: .03em; text-transform: uppercase; margin-right: auto; display: flex; align-items: center; gap: 10px; min-width: 0; min-height: var(--tap); }
-.brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.brand .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--stripe); box-shadow: 0 0 12px var(--stripe); flex: none; }
+.brand { color: inherit; text-decoration: none; margin-right: auto; display: flex; align-items: center; gap: 12px; min-width: 0; min-height: var(--tap); }
+/* Header logo: white on the theme gradient (header text is guaranteed 4.5:1 by theme.js), stripe-colored underline. */
+.wordmark.hdr { flex: none; }
+.wordmark.hdr .wm-1 { font: 600 9.5px/1 var(--display); letter-spacing: .24em; color: var(--top-ink); opacity: .92; margin-bottom: 1px; }
+.wordmark.hdr .wm-2 { font: 800 23px/.95 var(--display); letter-spacing: .04em; background: none; color: var(--top-ink); -webkit-text-fill-color: currentColor; border-bottom: 3px solid var(--stripe); padding-bottom: 1px; }
+.brand .league { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 12px; border-left: 1px solid rgb(255 255 255 / .35); font: 600 var(--fs-ui)/1.2 system-ui, sans-serif; color: var(--top-ink); }
 nav { display: flex; gap: 4px; }
 nav a, nav button, .iconbtn {
   color: var(--top-ink); text-decoration: none; font: 600 var(--fs-ui)/1 system-ui, sans-serif; background: none; border: 0; cursor: pointer;
