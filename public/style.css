@@ -83,6 +83,8 @@ nav svg, .iconbtn svg { width: 20px; height: 20px; flex: none; }
 .spacer { flex: 1; }
 
 .banner { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--radius-sm); padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-3); font-size: var(--fs-ui); }
+.banner.demo { border-left-color: var(--stripe); background: var(--sel); }
+.banner.warn { border-left-color: var(--warn); }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-4); }
 .stat { position: relative; overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-3) 14px 10px; box-shadow: var(--shadow); }
 .stat::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: linear-gradient(90deg, var(--top), var(--top-2), var(--stripe)); }

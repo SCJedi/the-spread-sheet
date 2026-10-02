@@ -253,6 +253,13 @@ function weekNav(path) {
 
 function banners() {
   const out = [];
+  if (S.league.demo) {
+    const mins = Math.max(1, Math.round((S.league.demo.reset_at + S.league.demo.every_ms - Date.now()) / 60000));
+    out.push(h('div', { class: 'banner demo' }, h('b', {}, 'Live demo. '), `Made-up players and picks, resetting in about ${mins} min. `,
+      S.me ? null : [h('a', { href: '#/login' }, 'Try it as a player'), '. '],
+      h('a', { href: brandLink(BRAND.repo, 'demo-banner') , target: '_blank', rel: 'noopener' }, 'Get your own free copy →')));
+  }
+  if (S.league.recovery_pin_set) out.push(h('div', { class: 'banner warn' }, h('b', {}, 'RECOVERY_PIN is still set. '), 'Delete it in the Cloudflare dashboard (Workers & Pages → your project → Settings → Variables and Secrets), so nobody else can use it.'));
   if (S.last_winners) out.push(h('div', { class: 'banner' }, `🏆 Congratulations to ${S.last_winners.week}'s winner${S.last_winners.names.length > 1 ? 's' : ''}: `, h('b', {}, S.last_winners.names.join(' & '))));
   if (S.view && S.view.week.message) out.push(h('div', { class: 'banner' }, S.view.week.message));
   return out;
@@ -712,6 +719,13 @@ function pinForm() {
 let authMode = new URLSearchParams(location.search).get('code') ? 'join' : 'login';
 function login() {
   if (S.me) { setTimeout(() => go('/account')); return h('p', {}, 'Logged in.'); }
+  if (S.league.demo) {
+    const enter = async (role) => { try { await api('/demo-login', { role }); history.replaceState(null, '', location.pathname + (role === 'commish' ? '#/admin' : '#/picks')); await load(); toast(role === 'commish' ? 'You are the demo commissioner' : 'Pick some winners!'); } catch (e) { toast(e.message, true); } };
+    return h('div', { class: 'card auth' },
+      h('h2', {}, 'Try the demo'), h('p', { class: 'muted' }, 'No sign-up. Everyone shares these demo logins, and everything resets every hour.'),
+      h('div', { class: 'row' }, h('button', { class: 'primary', onclick: () => enter('player') }, 'Try as a player'), h('button', { onclick: () => enter('commish') }, 'Try as the commissioner')),
+      h('p', { class: 'muted small' }, 'Like it? ', h('a', { href: brandLink(BRAND.repo, 'demo-login'), target: '_blank', rel: 'noopener' }, 'Get your own free copy'), ' and run it for your group.'));
+  }
   const setup = S.league.needs_setup;
   if (setup) authMode = 'join';
   const name = h('input', { autocomplete: 'username', maxlength: 40, required: true });
@@ -723,7 +737,8 @@ function login() {
   const submit = async (e) => {
     e.preventDefault();
     try {
-      await api(authMode === 'join' ? '/signup' : '/login', { name: name.value, pin: pin.value, code: code.value });
+      const r = await api(authMode === 'join' ? '/signup' : '/login', { name: name.value, pin: pin.value, code: code.value });
+      if (r.recovered) setTimeout(() => toast('PIN recovered. Now delete RECOVERY_PIN in the Cloudflare dashboard.'), 400);
       history.replaceState(null, '', location.pathname + '#/picks');
       await load();
       toast(setup ? 'You are the commissioner. Open Admin to share the join code.' : 'Welcome!');

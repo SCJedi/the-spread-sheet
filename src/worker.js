@@ -2,6 +2,7 @@ import { hashPin, verifyPin, signSession, readSession, randomToken } from './aut
 import { fetchWeekFrom, saveWeek, upsertGame, winnerFrom, feedUrlOk, FeedError, SOURCES } from './sources.js';
 import { weekId, weekLabel } from './espn.js';
 import { TEAMS } from '../public/teams.js';
+import { isDemo, seedDemo, DEMO_RESET_MS, DEMO_BLOCKED, DEMO_PLAYER, DEMO_COMMISH } from './demo.js';
 import { scoreWeek, isLocked, tiebreakGame } from './scoring.js';
 import { normalizePool } from '../public/pool.js';
 
@@ -36,6 +37,7 @@ async function ensureSchema(db) {
 }
 
 // ---------- small helpers ----------
+const recoveryPin = (env) => (env && /^\d{4,8}$/.test(String(env.RECOVERY_PIN || '')) ? String(env.RECOVERY_PIN) : null);
 const json = (data, status = 200, headers = {}) =>
   new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...headers } });
 const fail = (msg, status = 400) => json({ error: msg }, status);
@@ -135,6 +137,24 @@ async function loadWeek(db, wid) {
   };
 }
 
+// ---------- demo ----------
+// Loads the previous week too (so a finished week with a winner shows), then seeds made-up players and picks.
+async function maybeSeedDemo(db, env) {
+  if (!isDemo(env)) return;
+  const s = await getSettings(db);
+  const fresh = Date.now() - Number(s.demo_reset || 0) < DEMO_RESET_MS && (await one(db, 'SELECT 1 AS x FROM players LIMIT 1'));
+  if (fresh) return;
+  await setSetting(db, 'demo_reset', Date.now()); // claim it so concurrent requests do not all reseed
+  if (!s.current_week) await syncCurrent(db, s);
+  const s2 = await getSettings(db);
+  const weeks = await all(db, 'SELECT id FROM weeks');
+  if (weeks.length < 2 && s2.current_week) {
+    const [season, type, week] = s2.current_week.split('-').map(Number);
+    if (week > 1) await saveWeek(db, await fetchWeekFrom(s2, { season, type, week: week - 1 }), [(id) => snapshotStmt(db, id)]).catch((e) => console.log('demo prev week', e.message));
+  }
+  await seedDemo(db, { writeWeekStmts: (wid) => [snapshotStmt(db, wid)] });
+}
+
 // ---------- week view ----------
 async function weekView(db, settings, wid, me) {
   const raw = await loadWeek(db, wid);
@@ -220,8 +240,18 @@ async function api(req, env, ctx, url) {
   if (method === 'POST' && !(req.headers.get('content-type') || '').includes('application/json')) return fail('JSON only', 415);
   const body = method === 'POST' ? await req.json().catch(() => ({})) : {};
 
+  if (method === 'POST' && isDemo(env) && DEMO_BLOCKED.includes(path)) return fail("That's switched off in the demo so it stays nice for the next visitor. Get your own free copy to try everything.", 403);
+
+  if (method === 'POST' && path === '/demo-login') {
+    if (!isDemo(env)) return fail('Not found', 404);
+    const p = await one(db, 'SELECT * FROM players WHERE name_key = ?1', (body.role === 'commish' ? DEMO_COMMISH : DEMO_PLAYER).toLowerCase());
+    if (!p) return fail('The demo is resetting. Try again in a few seconds.', 503);
+    return json({ ok: true }, 200, { 'set-cookie': await sessionCookie(db, p) });
+  }
+
   if (method === 'GET' && path === '/state') {
     await syncIfStale(db, settings, ctx);
+    await maybeSeedDemo(db, env);
     const s = await getSettings(db);
     const weeks = await all(db, 'SELECT id, label, season FROM weeks ORDER BY season, season_type, week');
     let wid = url.searchParams.get('week') || s.current_week || (weeks.at(-1) || {}).id;
@@ -229,7 +259,9 @@ async function api(req, env, ctx, url) {
     const view = wid ? await weekView(db, s, wid, me) : null;
     const anyPlayer = await one(db, 'SELECT 1 AS x FROM players LIMIT 1');
     return json({
-      league: { name: s.league_name, hide_picks: s.hide_picks === '1', current_week: s.current_week, needs_setup: !anyPlayer, default_theme: s.default_theme, source: s.source, calc_preset: s.calc_preset ? JSON.parse(s.calc_preset) : null, last_sync: Number(s.last_sync) },
+      league: { name: s.league_name, hide_picks: s.hide_picks === '1', current_week: s.current_week, needs_setup: !anyPlayer && !isDemo(env), default_theme: s.default_theme, source: s.source,
+        demo: isDemo(env) ? { reset_at: Number(s.demo_reset || 0), every_ms: DEMO_RESET_MS } : null,
+        recovery_pin_set: !!(me && me.is_admin && recoveryPin(env)), calc_preset: s.calc_preset ? JSON.parse(s.calc_preset) : null, last_sync: Number(s.last_sync) },
       me: me ? { id: me.id, name: me.name, is_admin: !!me.is_admin } : null,
       weeks, view, last_winners: wid ? await lastWinners(db, weeks, wid) : null, now: Date.now(),
     });
@@ -252,6 +284,15 @@ async function api(req, env, ctx, url) {
   if (method === 'POST' && path === '/login') {
     const p = await one(db, 'SELECT * FROM players WHERE name_key = ?1', nameKey(body.name));
     if (!p || !p.active) return fail('No player by that name.', 404);
+    // Owner-only recovery: whoever controls the Cloudflare account can set RECOVERY_PIN, and a commissioner who
+    // logs in with it gets it as their new PIN. The site nags until the variable is deleted.
+    const rec = recoveryPin(env);
+    if (rec && p.is_admin && String(body.pin || '') === rec) {
+      await run(db, 'UPDATE players SET pin_hash = ?1, failed = 0, locked_until = 0, session_ver = session_ver + 1 WHERE id = ?2', await hashPin(rec), p.id);
+      await audit(db, p.id, p.id, null, 'pin_recovery', 'commissioner PIN reset with RECOVERY_PIN');
+      const fresh = await one(db, 'SELECT * FROM players WHERE id = ?1', p.id);
+      return json({ ok: true, recovered: true }, 200, { 'set-cookie': await sessionCookie(db, fresh) });
+    }
     if (p.locked_until > Date.now()) return fail('Too many wrong PINs. Try again in 15 minutes, or ask the commissioner to reset it.', 429);
     if (!(await verifyPin(String(body.pin || ''), p.pin_hash))) {
       const failed = p.failed + 1;
@@ -487,6 +528,7 @@ export default {
     await ensureSchema(env.DB);
     const settings = await getSettings(env.DB);
     if (settings.source !== 'manual') ctx.waitUntil(syncCurrent(env.DB, settings).catch((e) => console.log('cron sync failed', e.message)));
+    if (isDemo(env)) ctx.waitUntil(maybeSeedDemo(env.DB, env).catch((e) => console.log('demo reset failed', e.message)));
   },
 };
 

@@ -1,0 +1,24 @@
+# The public live demo: made-up players and picks that reset every hour.
+# Deploy with:  npx wrangler d1 create spread-sheet-demo   (paste the id below)
+#               npx wrangler deploy -c wrangler.demo.toml
+# Normal installs use wrangler.toml and never set DEMO.
+name = "the-spread-sheet-demo"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+
+[assets]
+directory = "./public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "spread-sheet-demo"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+[vars]
+DEMO = "1"
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[observability]
+enabled = true
