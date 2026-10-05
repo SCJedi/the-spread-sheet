@@ -29,6 +29,12 @@ function h(tag, attrs = {}, ...kids) {
   return el;
 }
 
+// replaceChildren() turns null into the text "null" and arrays into "[object …]" text, so every
+// conditional or list child goes through this.
+function setKids(el, ...kids) {
+  el.replaceChildren(...kids.flat(Infinity).filter((k) => k != null && k !== false && k !== ''));
+}
+
 async function api(path, body) {
   const res = await fetch('/api' + path, body === undefined
     ? { credentials: 'same-origin' }
@@ -145,7 +151,7 @@ function render() {
   // The product brand stays at the top of every page; the pool's own name sits beside it (unless it is the default).
   const ownName = S.league.name && S.league.name !== BRAND.product;
   document.title = ownName ? `${S.league.name} · ${BRAND.product}` : BRAND.product;
-  document.getElementById('brand').replaceChildren(
+  setKids(document.getElementById('brand'),
     h('span', { class: 'wordmark hdr', 'aria-hidden': 'true' }, wordmark()),
     h('span', { class: 'sr' }, BRAND.product),
     ownName ? h('span', { class: 'league' }, S.league.name) : null);
@@ -618,7 +624,7 @@ function fillWho(el, p) {
   const g = S.view.games.find((x) => x.id === el.dataset.gid);
   const pk = S.view.picks.find((x) => x.player_id === p.id && x.game_id === g.id);
   const s = pickState(pk, g);
-  el.replaceChildren(h('b', {}, ` · ${p.name}: `), s.s === 'hidden' ? [lockIcon(), ' hidden'] : s.s === 'none' ? 'no pick yet' : s.s === 'miss' ? 'no pick' : `${pk.team} ${s.glyph}`);
+  setKids(el, h('b', {}, ` · ${p.name}: `), s.s === 'hidden' ? [lockIcon(), ' hidden'] : s.s === 'none' ? 'no pick yet' : s.s === 'miss' ? 'no pick' : `${pk.team} ${s.glyph}`);
 }
 
 // ---------- my picks ----------
