@@ -30,7 +30,7 @@ Stack: one Cloudflare Worker (`src/worker.js`) plus a D1 (SQLite) database bound
 | `public/setup-guide.html` | Picture-by-picture setup guide served at `/setup-guide.html`. Steps come from `docs/GUIDE-FACTS.md`. |
 | `docs/GUIDE-FACTS.md` | Single source for every user-facing guide: steps, names, links, recovery, troubleshooting, disclaimer. |
 | `test/*.test.js` | `node:test` suites: `scoring`, `pool`, `theme`, `sources`. |
-| `wrangler.toml` | Worker `sportspicks`, `main = "src/worker.js"`, assets from `./public`, D1 binding `DB` (database `sportspicks`), cron `*/10 * * * *`. |
+| `wrangler.toml` | Worker `the-spread-sheet`, `main = "src/worker.js"`, assets from `./public`, D1 binding `DB` (database `the-spread-sheet`), cron `*/10 * * * *`. |
 
 ## Data model
 
@@ -102,7 +102,7 @@ npm test             # node --test: scoring, pool, theme, sources
 
 **Deploy.**
 - One-click: the "Deploy to Cloudflare" button in `README.md` copies the repo to the user's GitHub and provisions the Worker and D1 database.
-- CLI: `npx wrangler login`, `npx wrangler d1 create sportspicks`, paste the printed `database_id` into `wrangler.toml` (the committed value is a zero placeholder), then `npx wrangler deploy`.
+- CLI: `npx wrangler login`, `npx wrangler d1 create the-spread-sheet`, paste the printed `database_id` into `wrangler.toml` (the committed value is a zero placeholder), then `npx wrangler deploy`.
 
 ## Extending
 

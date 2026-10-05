@@ -1,14 +1,14 @@
-name = "sportspicks"
+name = "the-spread-sheet"
 main = "src/worker.js"
 compatibility_date = "2025-09-01"
 
 [assets]
 directory = "./public"
 
-# `npx wrangler d1 create sportspicks` prints the database_id to paste here.
+# `npx wrangler d1 create the-spread-sheet` prints the database_id to paste here.
 [[d1_databases]]
 binding = "DB"
-database_name = "sportspicks"
+database_name = "the-spread-sheet"
 database_id = "00000000-0000-0000-0000-000000000000"
 
 # Pulls the schedule and scores every 10 minutes. The page also refreshes them on view.

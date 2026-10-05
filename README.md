@@ -114,7 +114,7 @@ npm install
 npm run dev            # http://localhost:8787 with a local database
 npm test               # unit tests
 npx wrangler login
-npx wrangler d1 create sportspicks   # paste the printed database_id into wrangler.toml
+npx wrangler d1 create the-spread-sheet   # paste the printed database_id into wrangler.toml
 npx wrangler deploy
 ```
 
