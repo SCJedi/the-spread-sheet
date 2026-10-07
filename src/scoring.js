@@ -94,3 +94,47 @@ export function scoreWeek({ games, entrants, picks, tiebreakers, tiebreakGameId 
     tiebreak: { game_id: tbGame ? tbGame.id : null, actual },
   };
 }
+
+/**
+ * Season totals across weeks. weeks: [{ id, label, games, entrants, picks, tiebreakers, tiebreakGameId }]
+ * in calendar order. Only decided games count; pending games are ignored until they finish.
+ * Returns players ranked by total correct picks, then weeks won.
+ */
+export function seasonStats(weeks) {
+  const by = new Map();
+  const get = (id) => {
+    if (!by.has(id)) by.set(id, { player_id: id, wins: 0, losses: 0, weeksPlayed: 0, weeksWon: 0, sharedWins: 0, weekly: {}, best: null, worst: null, longestStreak: 0, streak: 0 });
+    return by.get(id);
+  };
+  const weekInfo = [];
+  for (const w of weeks) {
+    const sc = scoreWeek(w);
+    weekInfo.push({ id: w.id, label: w.label, final: sc.final, winners: sc.winners });
+    const picksBy = new Map(w.picks.map((p) => [`${p.player_id}:${p.game_id}`, p.team]));
+    const ordered = [...w.games].sort((a, b) => a.kickoff - b.kickoff || (a.id < b.id ? -1 : 1));
+    for (const r of sc.rows) {
+      const s = get(r.player_id);
+      s.wins += r.wins; s.losses += r.losses; s.weeksPlayed++;
+      s.weekly[w.id] = { wins: r.wins, losses: r.losses, pending: r.pending, rank: r.rank, won: sc.winners.includes(r.player_id) };
+      if (sc.winners.includes(r.player_id)) { s.weeksWon++; if (sc.winners.length > 1) s.sharedWins++; }
+      // Best and worst only count finished weeks, so a half-played week can't look like a slump.
+      if (sc.final) {
+        const rec = { week: w.id, label: w.label, wins: r.wins, losses: r.losses };
+        if (!s.best || r.wins > s.best.wins) s.best = rec;
+        if (!s.worst || r.wins < s.worst.wins) s.worst = rec;
+      }
+      // Streak of correct picks in kickoff order across the season. A miss or a loss ends it.
+      for (const g of ordered) {
+        const win = gameWinner(g);
+        if (win === null) continue;
+        const pick = picksBy.get(`${r.player_id}:${g.id}`);
+        if (pick && pick === win) { s.streak++; if (s.streak > s.longestStreak) s.longestStreak = s.streak; }
+        else s.streak = 0;
+      }
+    }
+  }
+  const rows = [...by.values()].sort((a, b) => b.wins - a.wins || b.weeksWon - a.weeksWon || a.losses - b.losses || a.player_id - b.player_id);
+  let rank = 0;
+  rows.forEach((r, i) => { const p = rows[i - 1]; rank = p && p.wins === r.wins && p.weeksWon === r.weeksWon ? rank : i + 1; r.rank = rank; });
+  return { weeks: weekInfo, rows };
+}

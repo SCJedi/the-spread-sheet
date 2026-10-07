@@ -44,7 +44,7 @@ Every guide (README.md, START-HERE.txt, public/setup-guide.html, AGENTS.md, llms
 Done. The schedule, scores and winners update by themselves every 10 minutes. The database tables set themselves up on the first visit.
 
 ## Every week
-- Nothing is required. The current week appears on its own (the automatic source rolls over around Wednesday). Admin → This week → "Load next week early" opens picks sooner.
+- Nothing is required. Next week opens for picks as soon as this week's last game kicks off. Admin → Settings → "Open picks for" can be set to this week only, next week too (the default) or the whole season. The board moves to the new week when the automatic source rolls over, around Wednesday. Past weeks stay in the week picker, and the Season tab adds them up.
 - Commissioner extras: Enter picks (for people who text their picks; works after kickoff, and everything goes in the change log), the board message, the tiebreak game, result overrides, player PIN resets.
 
 ## Data sources (Admin → Data source)

@@ -3,7 +3,7 @@ import { fetchWeekFrom, saveWeek, upsertGame, winnerFrom, feedUrlOk, FeedError, 
 import { weekId, weekLabel } from './espn.js';
 import { TEAMS } from '../public/teams.js';
 import { isDemo, seedDemo, DEMO_RESET_MS, DEMO_BLOCKED, DEMO_PLAYER, DEMO_COMMISH } from './demo.js';
-import { scoreWeek, isLocked, tiebreakGame } from './scoring.js';
+import { scoreWeek, isLocked, tiebreakGame, seasonStats } from './scoring.js';
 import { normalizePool } from '../public/pool.js';
 
 // Schema applies itself on first request, so deploying needs no migration step.
@@ -25,7 +25,38 @@ const SCHEMA = [
 // calc_preset is just the commissioner's suggested calculator settings, never money or payment data.
 const DEFAULTS = { league_name: 'The Spread Sheet', hide_picks: '1', join_code: '', current_week: '', last_sync: '0', calc_preset: '', default_theme: '',
   // Data source: 'espn' | 'custom' | 'manual'. feed_key is a secret and never leaves the server.
-  source: 'espn', feed_url: '', feed_key: '' };
+  source: 'espn', feed_url: '', feed_key: '',
+  // Which weeks are open for picks: 'current' | 'next' (next week opens once this week's last game kicks off) | 'season'.
+  open_mode: 'next', season_sync: '0',
+  // Season tab and its parts, each switchable by the commissioner.
+  season_tab: '1', season_weeks_won: '1', season_weekly: '1', season_best_worst: '1', season_streaks: '1' };
+const OPEN_MODES = ['current', 'next', 'season'];
+const SEASON_KEYS = ['season_tab', 'season_weeks_won', 'season_weekly', 'season_best_worst', 'season_streaks'];
+const REGULAR_WEEKS = 18;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// The week after (season, type, week): preseason runs into the regular season, which runs into the playoffs.
+function nextWeekOf(season, type, week) {
+  if (type === 1) return week < 4 ? { season, type: 1, week: week + 1 } : { season, type: 2, week: 1 };
+  if (type === 2) return week < REGULAR_WEEKS ? { season, type: 2, week: week + 1 } : { season, type: 3, week: 1 };
+  return week < 5 ? { season, type: 3, week: week + 1 } : null;
+}
+
+// Opens upcoming weeks according to open_mode, and keeps their kickoff times fresh (kickoff is what locks picks).
+async function openAhead(db, settings, w) {
+  const mode = OPEN_MODES.includes(settings.open_mode) ? settings.open_mode : 'next';
+  if (mode === 'current' || !w.games.length) return;
+  const save = (opts) => fetchWeekFrom(settings, opts).then((x) => (x.games.length ? saveWeek(db, x, [(id) => snapshotStmt(db, id)]) : null)).catch((e) => console.log('open ahead', opts, e.message));
+  const next = nextWeekOf(w.season, w.type, w.week);
+  if (!next) return;
+  const allKicked = Math.max(...w.games.map((g) => g.kickoff)) <= Date.now();
+  const haveNext = await one(db, 'SELECT 1 AS x FROM weeks WHERE id = ?1', weekId(next.season, next.type, next.week));
+  if (mode === 'season' || allKicked || haveNext) await save(next); // once open, refreshed on every sync
+  if (mode === 'season' && w.type === 2 && Date.now() - Number(settings.season_sync || 0) > DAY_MS) {
+    await setSetting(db, 'season_sync', Date.now());
+    for (let wk = next.week + 1; wk <= REGULAR_WEEKS; wk++) await save({ season: w.season, type: 2, week: wk });
+  }
+}
 const SESSION_DAYS = 60;
 const SYNC_EVERY_MS = 5 * 60 * 1000;
 
@@ -95,6 +126,7 @@ async function syncCurrent(db, settings) {
   const stale = await all(db, `SELECT DISTINCT w.season, w.season_type, w.week FROM games g JOIN weeks w ON w.id = g.week_id
     WHERE g.state != 'post' AND g.manual_winner IS NULL AND g.kickoff < ?1 AND g.week_id != ?2 AND g.id NOT LIKE 'm-%'`, Date.now(), w.id);
   for (const s of stale) await saveWeek(db, await fetchWeekFrom(settings, { season: s.season, type: s.season_type, week: s.week }), [(id) => snapshotStmt(db, id)]);
+  await openAhead(db, settings, w);
   return w.id;
 }
 
@@ -254,17 +286,39 @@ async function api(req, env, ctx, url) {
     await maybeSeedDemo(db, env);
     const s = await getSettings(db);
     const weeks = await all(db, 'SELECT id, label, season FROM weeks ORDER BY season, season_type, week');
+    // The earliest week that still has a game open for picks; the Picks page opens there.
+    const openRow = await one(db, `SELECT w.id FROM games g JOIN weeks w ON w.id = g.week_id WHERE g.kickoff > ?1 AND g.state = 'pre'
+      ORDER BY w.season, w.season_type, w.week LIMIT 1`, Date.now());
     let wid = url.searchParams.get('week') || s.current_week || (weeks.at(-1) || {}).id;
     if (wid && !weeks.find((w) => w.id === wid)) wid = s.current_week;
     const view = wid ? await weekView(db, s, wid, me) : null;
     const anyPlayer = await one(db, 'SELECT 1 AS x FROM players LIMIT 1');
     return json({
       league: { name: s.league_name, hide_picks: s.hide_picks === '1', current_week: s.current_week, needs_setup: !anyPlayer && !isDemo(env), default_theme: s.default_theme, source: s.source,
+        open_week: openRow ? openRow.id : s.current_week, open_mode: s.open_mode,
+        season_cfg: Object.fromEntries(SEASON_KEYS.map((k) => [k.replace('season_', ''), s[k] !== '0'])),
         demo: isDemo(env) ? { reset_at: Number(s.demo_reset || 0), every_ms: DEMO_RESET_MS } : null,
         recovery_pin_set: !!(me && me.is_admin && recoveryPin(env)), calc_preset: s.calc_preset ? JSON.parse(s.calc_preset) : null, last_sync: Number(s.last_sync) },
       me: me ? { id: me.id, name: me.name, is_admin: !!me.is_admin } : null,
       weeks, view, last_winners: wid ? await lastWinners(db, weeks, wid) : null, now: Date.now(),
     });
+  }
+
+  if (method === 'GET' && path === '/season') {
+    if (settings.season_tab === '0') return fail('The Season tab is switched off for this pool.', 404);
+    const season = Number(url.searchParams.get('season')) || Number((settings.current_week || '').split('-')[0]);
+    const ids = await all(db, 'SELECT id FROM weeks WHERE season = ?1 ORDER BY season_type, week', season);
+    const weeks = [], names = new Map();
+    for (const { id } of ids) {
+      const raw = await loadWeek(db, id);
+      if (!raw || !raw.games.length) continue;
+      raw.players.forEach((p) => names.set(p.id, p));
+      if (!raw.players.length) continue;
+      weeks.push({ id, label: raw.week.label, games: raw.games, entrants: raw.players, picks: raw.picks, tiebreakers: raw.tbs, tiebreakGameId: raw.week.tiebreak_game });
+    }
+    // Only totals leave the server: no picks, so nothing hidden before kickoff is revealed.
+    const st = seasonStats(weeks);
+    return json({ season, weeks: st.weeks, rows: st.rows, players: [...names.values()] });
   }
 
   if (method === 'POST' && path === '/signup') {
@@ -332,13 +386,15 @@ async function api(req, env, ctx, url) {
     const log = await all(db, `SELECT a.at, a.action, a.detail, a.week_id, ap.name AS actor, pp.name AS player FROM audit a
       LEFT JOIN players ap ON ap.id = a.actor_id LEFT JOIN players pp ON pp.id = a.player_id ORDER BY a.id DESC LIMIT 200`);
     const source = { source: settings.source, feed_url: settings.feed_url, has_key: !!settings.feed_key, key_hint: settings.feed_key ? `…${settings.feed_key.slice(-4)}` : '' };
-    return json({ settings: { league_name: settings.league_name, hide_picks: settings.hide_picks === '1', join_code: settings.join_code }, source, teams: TEAMS.map((t) => ({ abbr: t.abbr, name: t.name })), players, picks, tiebreakers: tbs, log, week_id: wid });
+    return json({ settings: { league_name: settings.league_name, hide_picks: settings.hide_picks === '1', join_code: settings.join_code, open_mode: settings.open_mode, ...Object.fromEntries(SEASON_KEYS.map((k) => [k, settings[k] !== '0'])) }, source, teams: TEAMS.map((t) => ({ abbr: t.abbr, name: t.name })), players, picks, tiebreakers: tbs, log, week_id: wid });
   }
 
   if (method === 'POST' && path === '/admin/settings') {
     if (body.league_name !== undefined) await setSetting(db, 'league_name', cleanName(body.league_name) || 'The Spread Sheet');
     if (body.hide_picks !== undefined) await setSetting(db, 'hide_picks', body.hide_picks ? '1' : '0');
     if (body.calc_preset !== undefined) await setSetting(db, 'calc_preset', body.calc_preset ? JSON.stringify(normalizePool(body.calc_preset)) : '');
+    if (body.open_mode !== undefined && OPEN_MODES.includes(body.open_mode)) { await setSetting(db, 'open_mode', body.open_mode); await setSetting(db, 'last_sync', '0'); await setSetting(db, 'season_sync', '0'); }
+    for (const k of SEASON_KEYS) if (body[k] !== undefined) await setSetting(db, k, body[k] ? '1' : '0');
     if (body.default_theme !== undefined) await setSetting(db, 'default_theme', /^[A-Z]{2,3}$/.test(body.default_theme) ? body.default_theme : '');
     if (body.join_code !== undefined) await setSetting(db, 'join_code', String(body.join_code).trim().slice(0, 30));
     await audit(db, me.id, null, null, 'settings', body);

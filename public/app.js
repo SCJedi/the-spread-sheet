@@ -80,6 +80,10 @@ function go(path, week) {
 async function load() {
   const r = route();
   S = await api('/state' + (r.week ? `?week=${encodeURIComponent(r.week)}` : ''));
+  if (r.path === '/picks' && !r.week && S.league.open_week && S.view && S.view.week.id !== S.league.open_week) {
+    S = await api(`/state?week=${encodeURIComponent(S.league.open_week)}`);
+  }
+  seasonData = null; // refetched on demand
   if (!themeChoice.id) paintTheme();
   if (r.path === '/admin' && S.me && S.me.is_admin) A = await api('/admin' + (S.view ? `?week=${S.view.week.id}` : ''));
   render();
@@ -342,7 +346,9 @@ function calcPanel(result, byPlayer) {
 // always visible, with a per-game result strip in each row (tap a row for that player's picks).
 // Games: how the group split on each game (tap a game for who picked what).
 let boardFilter = '';
-let boardView = store.get('sp_board_view') === 'games' ? 'games' : 'standings';
+let boardView = ['games', 'season'].includes(store.get('sp_board_view')) ? store.get('sp_board_view') : 'standings';
+let seasonData = null;   // last /api/season response
+const seasonOpen = new Set();
 const boardOpen = new Set(); // expanded player rows; kept across the live re-render
 const gameOpen = new Set();  // expanded game cards
 let boardWeek = null;
@@ -414,7 +420,7 @@ function board() {
       : [h('b', {}, `Leader ${leader ? leader.wins : 0} W`), leaders > 1 ? ` (${leaders} tied)` : '', ` · ${finals}/${v.games.length} final`, live ? ` · ${live} live` : '']));
 
   const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Board view' },
-    [['standings', 'Standings'], ['games', 'Games']].map(([k, l]) => h('button', { class: boardView === k ? 'on' : '', 'aria-pressed': boardView === k ? 'true' : 'false', onclick: () => setBoardView(k) }, l)));
+    [['standings', 'Standings'], ['games', 'Games'], ...(S.league.season_cfg.tab ? [['season', 'Season']] : [])].map(([k, l]) => h('button', { class: boardView === k ? 'on' : '', 'aria-pressed': boardView === k ? 'true' : 'false', onclick: () => setBoardView(k) }, l)));
   const search = h('input', { type: 'search', placeholder: 'Find a player', value: boardFilter, 'aria-label': 'Find a player', oninput: (e) => { boardFilter = e.target.value; applyFilter(); } });
 
   return h('div', {},
@@ -424,7 +430,8 @@ function board() {
       S.me && !myRow ? h('a', { class: 'btn primary', href: '#/picks' }, 'Make your picks') : null),
     banners(), stats, bsum,
     result ? calcPanel(result, ctx.byPlayer) : null,
-    st.rows.length
+    boardView === 'season' && S.league.season_cfg.tab ? seasonView(v.week.season)
+    : st.rows.length
       ? (boardView === 'games' ? gamesView(ctx) : standingsView(ctx))
       : h('div', { class: 'card empty' }, h('p', {}, 'Nobody has picked yet this week.'), h('a', { class: 'btn primary', href: '#/picks' }, 'Be the first')),
     h('p', { class: 'lb-none card', hidden: true }),
@@ -456,6 +463,64 @@ function applyFilter() {
     const matches = S.view.players.filter((p) => p.name.toLowerCase().includes(q));
     if (matches.length === 1) document.querySelectorAll('.g-who').forEach((el) => fillWho(el, matches[0]));
   }
+}
+
+// ----- season -----
+// Totals across the season. Each part can be switched off by the commissioner (Admin → Settings).
+function seasonView(season) {
+  const cfg = S.league.season_cfg;
+  if (!seasonData || seasonData.season !== season) {
+    if (!seasonData || seasonData.loading !== season) {
+      seasonData = { loading: season, season: null };
+      api(`/season?season=${season}`).then((d) => { seasonData = d; if (route().path === '/' && boardView === 'season') render(); })
+        .catch((e) => { seasonData = { season, error: e.message }; render(); });
+    }
+    return h('div', { class: 'card empty' }, h('p', { class: 'muted' }, 'Adding up the season…'));
+  }
+  if (seasonData.error) return h('div', { class: 'card' }, h('p', {}, seasonData.error));
+  const d = seasonData;
+  if (!d.rows.length) return h('div', { class: 'card empty' }, h('p', {}, 'No picks yet this season.'));
+  const names = new Map(d.players.map((p) => [p.id, p]));
+  const rankCount = d.rows.reduce((m, r) => m.set(r.rank, (m.get(r.rank) || 0) + 1), new Map());
+  const rankText = (r) => (rankCount.get(r.rank) > 1 ? `T${r.rank}` : `${r.rank}`);
+  const weekNum = (w) => (w.label.match(/\d+/) || [w.label.slice(0, 2)])[0];
+  const finals = d.weeks.filter((w) => w.final).length;
+  const head = h('div', { class: 'lb-head' }, h('div', { class: 'lb-hmain ss' },
+    h('span', { class: 'c-rank' }, '#'), h('span', { class: 'c-name' }, 'Player'),
+    cfg.weekly ? h('span', { class: 'strip' }, d.weeks.map((w) => h('span', { class: `chip ${w.final ? 'gs-final' : 'gs-live'}`, title: w.label }, h('b', { class: 'g' }, weekNum(w)), h('b', { class: 'cd' }, `Wk ${weekNum(w)}`)))) : null,
+    h('span', { class: 'c-w', title: 'Correct picks this season' }, 'W'),
+    cfg.weeks_won ? h('span', { class: 'c-tb', title: 'Weeks won (ties count)' }, '🏆') : null,
+    cfg.streaks ? h('span', { class: 'c-pay', title: 'Longest run of correct picks' }, 'Streak') : null));
+  const row = (r) => {
+    const p = names.get(r.player_id) || { name: '?' };
+    const open = seasonOpen.has(r.player_id), isMe = S.me && S.me.id === r.player_id;
+    const toggle = () => { if (seasonOpen.has(r.player_id)) seasonOpen.delete(r.player_id); else seasonOpen.add(r.player_id); render(); };
+    const main = h('button', { class: 'lb-main ss', 'aria-expanded': open ? 'true' : 'false', onclick: toggle },
+      h('span', { class: 'c-rank' }, rankText(r)),
+      h('span', { class: 'c-name' }, h('span', { class: 'nm' }, p.name, isMe ? h('span', { class: 'sr' }, ' (you)') : null), h('span', { class: 'sponsor' }, `${r.wins}–${r.losses}`)),
+      cfg.weekly ? h('span', { class: 'strip', 'aria-hidden': 'true' }, d.weeks.map((w) => {
+        const x = r.weekly[w.id];
+        return h('i', { class: `chip ${!x ? 's-none' : x.won ? 's-win' : ''}` }, h('b', { class: 'g' }, x ? x.wins : '–'), h('b', { class: 'cd' }, x ? `${x.wins}${x.won ? '🏆' : ''}` : '–'));
+      })) : null,
+      h('span', { class: 'c-w' }, r.wins),
+      cfg.weeks_won ? h('span', { class: 'c-tb' }, r.weeksWon || '–') : null,
+      cfg.streaks ? h('span', { class: 'c-pay' }, r.longestStreak) : null);
+    const detail = open ? h('div', { class: 'lb-x' },
+      h('p', { class: 'x-sum' }, h('b', {}, `${r.wins}–${r.losses}`), ` across ${r.weeksPlayed} week${r.weeksPlayed === 1 ? '' : 's'}`,
+        cfg.weeks_won ? ` · ${r.weeksWon} week${r.weeksWon === 1 ? '' : 's'} won${r.sharedWins ? ` (${r.sharedWins} shared)` : ''}` : ''),
+      cfg.best_worst && r.best ? h('p', { class: 'small' }, h('b', {}, 'Best week: '), `${r.best.label}, ${r.best.wins}–${r.best.losses}`, r.worst && r.worst.week !== r.best.week ? [' · ', h('b', {}, 'Toughest: '), `${r.worst.label}, ${r.worst.wins}–${r.worst.losses}`] : '') : null,
+      cfg.streaks ? h('p', { class: 'small' }, h('b', {}, 'Longest streak: '), `${r.longestStreak} correct in a row`, ' · ', h('b', {}, 'Right now: '), `${r.streak} in a row`) : null,
+      cfg.weekly ? h('div', { class: 'tiles' }, d.weeks.map((w) => {
+        const x = r.weekly[w.id];
+        return h('button', { class: `tile ${!x ? 's-none' : x.won ? 's-win' : ''}`, onclick: () => go('/', w.id), 'aria-label': `${w.label}: ${x ? `${x.wins} right, ${x.losses} wrong, rank ${x.rank}` : 'did not play'}. Open this week.` },
+          h('span', { class: 't-m' }, w.label), h('span', { class: 't-p' }, x ? `${x.wins}–${x.losses}${x.won ? ' 🏆' : ''}` : '–'), x ? h('span', { class: 't-s' }, `#${x.rank}${x.pending ? ` · ${x.pending} to play` : ''}`) : null);
+      })) : null) : null;
+    return h('li', { class: ['lb-row', isMe ? 'me' : '', open ? 'open' : ''].join(' ').trim(), 'data-name': p.name.toLowerCase() }, main, detail);
+  };
+  const lead = d.rows[0];
+  return h('div', {},
+    h('p', { class: 'muted small' }, `${d.season} season · ${d.weeks.length} week${d.weeks.length === 1 ? '' : 's'} so far (${finals} final) · leader: `, h('b', {}, names.get(lead.player_id)?.name || '?'), ` with ${lead.wins} correct.`),
+    h('section', { class: 'lb season' }, head, h('ol', { class: 'lb-list' }, d.rows.map(row))));
 }
 
 // ----- standings -----
@@ -956,11 +1021,19 @@ function adminSettings() {
   const name = h('input', { value: s.league_name, maxlength: 40 });
   const code = h('input', { value: s.join_code, maxlength: 30 });
   const hide = h('input', { type: 'checkbox', checked: s.hide_picks });
+  const openMode = h('select', {}, [['current', 'This week only'], ['next', 'Next week too, once this week\'s last game kicks off (recommended)'], ['season', 'The whole season']]
+    .map(([k, l]) => h('option', { value: k, selected: (s.open_mode || 'next') === k }, l)));
+  const seasonBoxes = [['season_tab', 'Show the Season tab'], ['season_weeks_won', 'Weeks won 🏆'], ['season_weekly', 'Week-by-week records'], ['season_best_worst', 'Best and toughest week'], ['season_streaks', 'Streaks of correct picks']]
+    .map(([k, l]) => [k, h('input', { type: 'checkbox', checked: s[k] !== false }), l]);
   const theme = h('select', {}, THEMES.map((t) => h('option', { value: t.abbr === 'DEFAULT' ? '' : t.abbr, selected: (S.league.default_theme || '') === (t.abbr === 'DEFAULT' ? '' : t.abbr) }, `${t.theme} · ${t.colors}${t.city ? ` · ${t.city}` : ''}`)));
   return h('div', {}, h('div', { class: 'card' }, h('h2', {}, 'Pool settings'),
     h('div', { class: 'row' }, h('label', {}, 'Pool name', name), h('label', {}, 'Join code', code), h('label', {}, 'Site theme (people can still pick their own)', theme)),
     h('label', { class: 'check' }, hide, 'Hide everyone\'s picks until each game kicks off (stops copying)'),
-    h('button', { class: 'primary', style: 'margin-top:10px', onclick: () => act('/admin/settings', { league_name: name.value, join_code: code.value, hide_picks: hide.checked, default_theme: theme.value }) }, 'Save settings'),
+    h('label', {}, 'Open picks for', openMode),
+    h('p', { class: 'muted small' }, 'Upcoming weeks keep their kickoff times up to date, so picks always lock at the right moment. Manual mode is unaffected: you add weeks yourself.'),
+    h('h2', { class: 'sub' }, 'Season tab'),
+    seasonBoxes.map(([, box, l]) => h('label', { class: 'check' }, box, l)),
+    h('button', { class: 'primary', style: 'margin-top:10px', onclick: () => act('/admin/settings', { league_name: name.value, join_code: code.value, hide_picks: hide.checked, default_theme: theme.value, open_mode: openMode.value, ...Object.fromEntries(seasonBoxes.map(([k, box]) => [k, box.checked])) }) }, 'Save settings'),
     h('h2', { class: 'sub' }, 'Suggested pool settings'),
     h('p', { class: 'muted small' }, 'The site never handles money. If your group runs a pool offline, you can suggest calculator settings that anyone can load with one tap. Set them in the Pool calculator on the board, then press "Save as suggestion for everyone".'),
     S.league.calc_preset

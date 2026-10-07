@@ -39,6 +39,8 @@ Done. The schedule, scores and winners update by themselves every 10 minutes. Th
 - **A real leaderboard.** Standings show rank, wins, tiebreak and the pool payout on every row, at any screen size. Each row has a strip of per-game results (✓ won · ✕ lost · – no pick · ▲▼ leading or trailing live · • to play). Tap a player to see their picks. The **Games** view shows how the group split on each game.
 - **Wins, ranks and the tiebreaker** (combined points in the tiebreak game: closest wins, over or under) are calculated for you.
 - **Who is still alive.** Players who can no longer catch the leader are greyed out.
+- **A Season tab** adds up the whole season: total correct picks, weeks won 🏆 (shared ties count), week-by-week records, best and toughest weeks, and streaks of correct picks. The commissioner can switch each part on or off.
+- **Next week opens on its own** as soon as this week's last game kicks off, so people can pick ahead. The commissioner can choose "this week only" or "the whole season" instead.
 - **A change log** records every pick change and who made it.
 - **CSV export** of any week.
 
@@ -66,7 +68,7 @@ All of this is math in the viewer's own browser. It's remembered on their device
 
 ## Every week
 
-Nothing is required. The current week appears on its own (the automatic source rolls over around Wednesday). **Admin → This week → Load next week early** opens picks sooner.
+Nothing is required. Next week opens for picks as soon as this week's last game kicks off (Admin → Settings → "Open picks for" changes that), and the board moves to the new week when the automatic source rolls over, around Wednesday. Past weeks stay in the week picker all season.
 
 Commissioner extras:
 - **Enter picks** for people who text their picks. It works after kickoff, and everything goes in the change log.

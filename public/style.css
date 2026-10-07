@@ -216,6 +216,15 @@ details summary { cursor: pointer; font-weight: 600; min-height: var(--tap); dis
 .tile.s-hidden, .tile.s-none { border-style: dashed; background: transparent; }
 .t-diff { position: absolute; top: 3px; right: 5px; font: 800 12px/1 var(--display); color: var(--accent-text); }
 
+/* Season view: same row grid as standings; the TB/$ slots carry weeks won and streak. */
+.season .c-tb, .season .c-pay { color: var(--ink); }
+.season .lb-main.ss, .season .lb-hmain.ss { grid-template-columns: 28px minmax(0, 1fr) 36px 36px 52px; grid-template-areas: "rank name w tb pay" "strip strip strip strip strip"; }
+.season .chip { max-width: 28px; }
+@media (min-width: 960px) {
+  .season .lb-main.ss, .season .lb-hmain.ss { grid-template-columns: 36px 180px minmax(0, 1fr) 44px 48px 64px; grid-template-areas: "rank name strip w tb pay"; }
+  .season .chip { max-width: 64px; }
+}
+
 /* Games view */
 .gv { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); }
 .gcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); scroll-margin-top: calc(var(--hdr-h, 58px) + 8px); }
