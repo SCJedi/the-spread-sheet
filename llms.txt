@@ -11,6 +11,7 @@
 ## Developers and AI agents
 
 - [AGENTS.md](AGENTS.md): architecture map, data model, request flow, invariants that must never break, how to test, deploy and extend.
+- [API.md](API.md): the read API (state, export as JSON or CSV, season totals) and the export document format.
 - [FEED.md](FEED.md): the custom data feed JSON format, URL placeholders and API-key handling.
 
 ## Legal

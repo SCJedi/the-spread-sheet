@@ -64,6 +64,8 @@ The snapshot is placed in the **same D1 batch** as every write, so it is always 
 
 ## Request flow
 
+**Read API and exports.** `GET /api/export` (JSON or `format=csv`) and `GET /api/season?format=csv` go through `weekView()` and `seasonStats()`, so they show exactly what the viewer's board shows. CSV text comes from `src/export.js`, which defuses formula-looking cells; tested in `test/export.test.js`. The public contract is in `API.md`; add fields freely, but bump `api` before changing or removing one. Printed pages are the `#/print?what=board|sheet|tally` route in `printView()`, black on white on every theme.
+
 **Open weeks and season totals.**
 - The `open_mode` setting is `current`, `next` (the default) or `season`. `openAhead()` in `src/worker.js` applies it after each sync.
   - `next` opens the following week once every game of the current week has kicked off, and refreshes it every sync.

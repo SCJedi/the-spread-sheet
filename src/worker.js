@@ -5,6 +5,7 @@ import { TEAMS } from '../public/teams.js';
 import { isDemo, seedDemo, DEMO_RESET_MS, DEMO_BLOCKED, DEMO_PLAYER, DEMO_COMMISH } from './demo.js';
 import { scoreWeek, isLocked, tiebreakGame, seasonStats } from './scoring.js';
 import { normalizePool } from '../public/pool.js';
+import { weekCsv, seasonCsv, fileName } from './export.js';
 
 // Schema applies itself on first request, so deploying needs no migration step.
 // One statement per string: D1 batches prepared statements, not scripts.
@@ -72,6 +73,7 @@ const recoveryPin = (env) => (env && /^\d{4,8}$/.test(String(env.RECOVERY_PIN ||
 const json = (data, status = 200, headers = {}) =>
   new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...headers } });
 const fail = (msg, status = 400) => json({ error: msg }, status);
+const csvResponse = (body, name) => new Response(body, { headers: { 'content-type': 'text/csv; charset=utf-8', 'cache-control': 'no-store', 'content-disposition': `attachment; filename="${name}.csv"` } });
 const nameKey = (s) => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
 const cleanName = (s) => String(s || '').trim().replace(/\s+/g, ' ').slice(0, 40);
 const all = async (db, sql, ...args) => (await db.prepare(sql).bind(...args).all()).results;
@@ -293,6 +295,8 @@ async function api(req, env, ctx, url) {
     if (wid && !weeks.find((w) => w.id === wid)) wid = s.current_week;
     const view = wid ? await weekView(db, s, wid, me) : null;
     const anyPlayer = await one(db, 'SELECT 1 AS x FROM players LIMIT 1');
+    // Display names of active players (already public on the board once they pick); used for printed tally sheets.
+    const roster = (await all(db, 'SELECT name FROM players WHERE active = 1 ORDER BY name_key')).map((p) => p.name);
     return json({
       league: { name: s.league_name, hide_picks: s.hide_picks === '1', current_week: s.current_week, needs_setup: !anyPlayer && !isDemo(env), default_theme: s.default_theme, source: s.source,
         open_week: openRow ? openRow.id : s.current_week, open_mode: s.open_mode,
@@ -300,7 +304,7 @@ async function api(req, env, ctx, url) {
         demo: isDemo(env) ? { reset_at: Number(s.demo_reset || 0), every_ms: DEMO_RESET_MS } : null,
         recovery_pin_set: !!(me && me.is_admin && recoveryPin(env)), calc_preset: s.calc_preset ? JSON.parse(s.calc_preset) : null, last_sync: Number(s.last_sync) },
       me: me ? { id: me.id, name: me.name, is_admin: !!me.is_admin } : null,
-      weeks, view, last_winners: wid ? await lastWinners(db, weeks, wid) : null, now: Date.now(),
+      weeks, view, roster, last_winners: wid ? await lastWinners(db, weeks, wid) : null, now: Date.now(),
     });
   }
 
@@ -318,7 +322,20 @@ async function api(req, env, ctx, url) {
     }
     // Only totals leave the server: no picks, so nothing hidden before kickoff is revealed.
     const st = seasonStats(weeks);
-    return json({ season, weeks: st.weeks, rows: st.rows, players: [...names.values()] });
+    const out = { season, weeks: st.weeks, rows: st.rows, players: [...names.values()] };
+    if (url.searchParams.get('format') === 'csv') return csvResponse(seasonCsv(out), `${fileName(settings.league_name)}-${season}-season`);
+    return json(out);
+  }
+
+  // Public read export of one week. It shows exactly what the board shows this viewer: picks still hidden
+  // before kickoff come out as "hidden". Commissioners get the full sheet from /admin/export.csv.
+  if (method === 'GET' && path === '/export') {
+    const wid = url.searchParams.get('week') || settings.current_week;
+    const v = await weekView(db, settings, wid, me);
+    if (!v) return fail('Unknown week', 404);
+    const name = `${fileName(settings.league_name)}-${fileName(`${v.week.season}-${v.week.label}`)}`;
+    if (url.searchParams.get('format') === 'csv') return csvResponse(weekCsv(v), name);
+    return json({ api: 1, exported_at: new Date().toISOString(), pool: { name: settings.league_name }, ...v });
   }
 
   if (method === 'POST' && path === '/signup') {
@@ -548,19 +565,9 @@ async function api(req, env, ctx, url) {
 
   if (method === 'GET' && path === '/admin/export.csv') {
     const wid = url.searchParams.get('week') || settings.current_week;
-    const v = await weekView(db, { hide_picks: '0' }, wid, null);
+    const v = await weekView(db, { hide_picks: '0' }, wid, null); // the commissioner's full sheet, nothing hidden
     if (!v) return fail('Unknown week', 404);
-    const esc = (x) => `"${String(x ?? '').replace(/"/g, '""')}"`;
-    const head = ['Name', 'With', ...v.games.map((g) => `${g.away} @ ${g.home}`), 'Tiebreak', 'Wins', 'Rank'];
-    const lines = [head.map(esc).join(',')];
-    const winRow = ['Winning team', '', ...v.games.map((g) => g.manual_winner || g.winner || ''), v.standings.tiebreak.actual ?? '', '', ''];
-    lines.push(winRow.map(esc).join(','));
-    for (const r of v.standings.rows) {
-      const p = v.players.find((x) => x.id === r.player_id);
-      const pk = (gid) => (v.picks.find((x) => x.player_id === r.player_id && x.game_id === gid) || {}).team || '';
-      lines.push([p.name, p.sponsor, ...v.games.map((g) => pk(g.id)), r.tb ?? '', r.wins, r.rank].map(esc).join(','));
-    }
-    return new Response(lines.join('\n'), { headers: { 'content-type': 'text/csv', 'content-disposition': `attachment; filename="${v.week.label.replace(/\W+/g, '-')}.csv"` } });
+    return csvResponse(weekCsv(v), `${fileName(settings.league_name)}-${fileName(`${v.week.season}-${v.week.label}`)}-full`);
   }
 
   return fail('Not found', 404);

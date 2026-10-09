@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "test": "node --test test/scoring.test.js test/pool.test.js test/theme.test.js test/sources.test.js"
+    "test": "node --test test/scoring.test.js test/pool.test.js test/theme.test.js test/sources.test.js test/export.test.js"
   },
   "devDependencies": {
     "wrangler": "^4.40.0"

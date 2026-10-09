@@ -68,7 +68,8 @@ const winnerOf = (g) => g.manual_winner || (g.state === 'post' ? g.winner : null
 
 function route() {
   const [path, q] = location.hash.replace(/^#/, '').split('?');
-  return { path: path || '/', week: new URLSearchParams(q || '').get('week') };
+  const params = new URLSearchParams(q || '');
+  return { path: path || '/', week: params.get('week'), params };
 }
 function go(path, week) {
   calc.custom = false;
@@ -169,7 +170,8 @@ function render() {
     S.me && S.me.is_admin ? link('/admin', 'admin', 'Admin') : null,
     S.me ? link('/account', 'me', S.me.name, 'Me') : link('/login', 'me', 'Log in'),
   ].filter(Boolean));
-  const view = { '/': board, '/picks': picks, '/admin': admin, '/login': login, '/account': account, '/about': about }[r.path] || board;
+  const view = { '/': board, '/picks': picks, '/admin': admin, '/login': login, '/account': account, '/about': about, '/print': printView }[r.path] || board;
+  document.body.classList.toggle('printing', view === printView);
   $app.replaceChildren(view());
   measureSticky();
   if (view === board && boardView === 'games' && boardFilter) applyFilter();
@@ -427,6 +429,7 @@ function board() {
     h('div', { class: 'bar' },
       weekNav('/'), seg, h('div', { class: 'spacer' }), search,
       h('button', { class: 'toggle' + (calc.open ? ' on' : ''), 'aria-pressed': calc.open ? 'true' : 'false', onclick: () => { calc.open = !calc.open; store.set('sp_calc_open', calc.open); render(); } }, calc.open ? 'Hide pool calculator' : 'Pool calculator'),
+      exportMenu(v),
       S.me && !myRow ? h('a', { class: 'btn primary', href: '#/picks' }, 'Make your picks') : null),
     banners(), stats, bsum,
     result ? calcPanel(result, ctx.byPlayer) : null,
@@ -463,6 +466,111 @@ function applyFilter() {
     const matches = S.view.players.filter((p) => p.name.toLowerCase().includes(q));
     if (matches.length === 1) document.querySelectorAll('.g-who').forEach((el) => fillWho(el, matches[0]));
   }
+}
+
+// ----- print and export -----
+function exportMenu(v) {
+  const wk = encodeURIComponent(v.week.id);
+  const item = (href, label, note, download) => h('a', { class: 'menu-item', href, download: download ? '' : null }, h('b', {}, label), h('small', {}, note));
+  return h('details', { class: 'menu' },
+    h('summary', { class: 'btn' }, 'Print & export'),
+    h('div', { class: 'menu-pop', role: 'menu' },
+      item(`#/print?what=board&week=${wk}`, 'Print the board', 'This week, with everyone\'s picks'),
+      item(`#/print?what=sheet&week=${wk}`, 'Print pick sheets', 'Blank sheets people fill in by hand'),
+      item(`#/print?what=tally&week=${wk}`, 'Print a tally sheet', 'A grid for running a pool on paper'),
+      item(`/api/export?week=${wk}&format=csv`, 'Download CSV', 'Opens in Excel or Google Sheets', true),
+      item(`/api/export?week=${wk}&format=json`, 'Download JSON', 'For developers and AI tools', true),
+      S.league.season_cfg.tab ? item(`/api/season?season=${v.week.season}&format=csv`, 'Season CSV', 'Totals for the whole season', true) : null));
+}
+
+// Paper versions. Always black on white whatever the theme; the screen shows the page as it will print.
+function printView() {
+  const v = S.view;
+  const r = route();
+  const what = ['board', 'sheet', 'tally'].includes(r.params.get('what')) ? r.params.get('what') : 'board';
+  if (!v) return h('p', {}, 'No week loaded.');
+  let pageStyle = document.getElementById('page-size');
+  if (!pageStyle) { pageStyle = h('style', { id: 'page-size' }); document.head.append(pageStyle); }
+  pageStyle.textContent = `@page { size: ${what === 'sheet' ? 'portrait' : 'landscape'}; margin: 10mm; }`;
+  const set = (k, val) => { const q = new URLSearchParams(r.params); q.set(k, val); location.hash = `#/print?${q}`; };
+  const copies = Math.min(20, Math.max(1, Number(r.params.get('copies')) || 1));
+  const blanks = Math.min(80, Math.max(0, Number(r.params.get('blank') ?? 12)));
+  const withNames = r.params.get('names') !== '0';
+  const tabs = [['board', 'Board'], ['sheet', 'Pick sheets'], ['tally', 'Tally sheet']];
+  const toolbar = h('div', { class: 'print-bar no-print' },
+    h('a', { class: 'btn', href: '#/' }, '← Back'),
+    h('div', { class: 'seg', role: 'group', 'aria-label': 'What to print' }, tabs.map(([k, l]) => h('button', { class: what === k ? 'on' : '', 'aria-pressed': what === k ? 'true' : 'false', onclick: () => set('what', k) }, l))),
+    what === 'sheet' ? h('label', { class: 'inline' }, 'Copies ', h('input', { type: 'number', min: 1, max: 20, value: copies, onchange: (e) => set('copies', e.target.value) })) : null,
+    what === 'tally' ? [h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: withNames, onchange: (e) => set('names', e.target.checked ? '1' : '0') }), 'Fill in current players'),
+      h('label', { class: 'inline' }, 'Blank rows ', h('input', { type: 'number', min: 0, max: 80, value: blanks, onchange: (e) => set('blank', e.target.value) }))] : null,
+    h('div', { class: 'spacer' }),
+    h('button', { class: 'primary', onclick: () => window.print() }, 'Print'));
+  const body = what === 'sheet' ? printSheets(v, copies) : what === 'tally' ? printTally(v, withNames, blanks) : printBoard(v);
+  return h('div', {}, toolbar, h('p', { class: 'muted small no-print' }, what === 'sheet' ? 'One sheet per page, ready to copy or hand out.' : 'Prints sideways (landscape) so every game fits.'), body);
+}
+
+const printHead = (v, title) => h('div', { class: 'pp-head' },
+  h('div', {}, h('div', { class: 'pp-title' }, title), h('div', { class: 'pp-sub' }, `${S.league.name} · ${v.week.season} ${v.week.label}`)),
+  h('div', { class: 'pp-mark' }, h('span', { class: 'pp-wm1' }, 'The Spread'), h('span', { class: 'pp-wm2' }, 'Sheet')));
+const printFoot = () => h('div', { class: 'pp-foot' }, `Printed ${fullFmt.format(Date.now())} · Made with The Spread Sheet by ${BRAND.maker} · infinitevisionsaiagents.com`);
+const gameHead = (g) => h('th', { class: 'pp-g' }, h('span', {}, g.away), h('span', {}, g.home), h('small', {}, winnerOf(g) ? 'Final' : `${dayFmt.format(g.kickoff)} ${timeFmt.format(g.kickoff)}`));
+
+function printBoard(v) {
+  const st = v.standings;
+  const pickOf = new Map(v.picks.map((p) => [`${p.player_id}:${p.game_id}`, p]));
+  const tbOf = new Map(v.tiebreakers.map((t) => [t.player_id, t]));
+  const who = new Map(v.players.map((p) => [p.id, p]));
+  const rankCount = st.rows.reduce((m, x) => m.set(x.rank, (m.get(x.rank) || 0) + 1), new Map());
+  const cell = (pk, g) => {
+    const s = pickState(pk, g);
+    if (s.s === 'none') return h('td', {}, '');
+    if (s.s === 'hidden') return h('td', { class: 'pp-hid' }, '•');
+    if (s.s === 'miss') return h('td', { class: 'pp-loss' }, '—');
+    const team = pk.team;
+    return h('td', { class: s.s === 'win' ? 'pp-win' : s.s === 'loss' ? 'pp-loss' : '' }, team, s.s === 'win' ? ' ✓' : s.s === 'lead' ? ' ▲' : s.s === 'trail' ? ' ▼' : '');
+  };
+  return h('div', { class: 'print-page' }, printHead(v, 'Standings and picks'),
+    h('table', { class: 'pp-grid' },
+      h('thead', {}, h('tr', {}, h('th', { class: 'pp-rank' }, '#'), h('th', { class: 'pp-name' }, 'Player'), v.games.map(gameHead), h('th', {}, 'TB'), h('th', {}, 'W'))),
+      h('tbody', {},
+        h('tr', { class: 'pp-winners' }, h('td', {}), h('td', { class: 'pp-name' }, 'Winning team'), v.games.map((g) => h('td', {}, winnerOf(g) || '')), h('td', {}, st.tiebreak.actual ?? ''), h('td', {})),
+        st.rows.map((row) => {
+          const p = who.get(row.player_id) || { name: '?' };
+          const tb = tbOf.get(row.player_id);
+          return h('tr', {}, h('td', { class: 'pp-rank' }, rankCount.get(row.rank) > 1 ? `T${row.rank}` : row.rank), h('td', { class: 'pp-name' }, p.name),
+            v.games.map((g) => cell(pickOf.get(`${row.player_id}:${g.id}`), g)), h('td', {}, tb ? (tb.hidden ? '•' : tb.total) : ''), h('td', { class: 'pp-w' }, row.wins));
+        }))),
+    h('p', { class: 'pp-key' }, 'Key: ✓ won · struck through = lost · — no pick · ▲▼ leading or trailing live · • hidden until kickoff. Tiebreak: combined points in the tiebreak game, closest wins.'),
+    printFoot());
+}
+
+function printSheets(v, copies) {
+  const tbGame = v.games.find((g) => g.id === v.week.tiebreak_game);
+  const sheet = () => h('div', { class: 'print-page pp-sheet' }, printHead(v, 'Pick sheet'),
+    h('div', { class: 'pp-line' }, 'Name', h('span', {})),
+    h('table', { class: 'pp-picks' },
+      h('thead', {}, h('tr', {}, h('th', {}, 'Kickoff'), h('th', {}, 'Away'), h('th', {}), h('th', {}, 'Home'))),
+      h('tbody', {}, v.games.map((g) => h('tr', {},
+        h('td', { class: 'pp-when' }, `${dayFmt.format(g.kickoff)} ${timeFmt.format(g.kickoff)}`),
+        h('td', {}, h('span', { class: 'pp-box' }), ` ${g.away}`, h('small', {}, g.away_name ? ` ${g.away_name}` : '')),
+        h('td', { class: 'pp-at' }, '@'),
+        h('td', {}, h('span', { class: 'pp-box' }), ` ${g.home}`, h('small', {}, g.home_name ? ` ${g.home_name}` : '')))))),
+    tbGame ? h('div', { class: 'pp-line' }, `Tiebreak: total points in ${tbGame.away} @ ${tbGame.home}`, h('span', { class: 'short' })) : null,
+    h('p', { class: 'pp-key' }, 'Tick one team per game. Picks lock when each game kicks off. Closest tiebreak guess wins ties.'),
+    printFoot());
+  return h('div', {}, Array.from({ length: copies }, sheet));
+}
+
+function printTally(v, withNames, blanks) {
+  const names = withNames ? (S.roster && S.roster.length ? S.roster : v.players.map((p) => p.name)) : [];
+  const row = (name) => h('tr', {}, h('td', { class: 'pp-name' }, name || ''), v.games.map(() => h('td', {}, '')), h('td', {}, ''), h('td', {}, ''));
+  return h('div', { class: 'print-page' }, printHead(v, 'Tally sheet'),
+    h('table', { class: 'pp-grid pp-tally' },
+      h('thead', {}, h('tr', {}, h('th', { class: 'pp-name' }, 'Player'), v.games.map(gameHead), h('th', {}, 'TB'), h('th', {}, 'W'))),
+      h('tbody', {}, h('tr', { class: 'pp-winners' }, h('td', { class: 'pp-name' }, 'Winner'), v.games.map(() => h('td', {}, '')), h('td', {}, ''), h('td', {}, '')),
+        names.map(row), Array.from({ length: blanks }, () => row('')))),
+    h('p', { class: 'pp-key' }, 'Write each pick under its game. Circle correct picks once the winner is known, then total them in W. Tiebreak: combined points in the last game, closest wins.'),
+    printFoot());
 }
 
 // ----- season -----

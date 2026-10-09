@@ -41,6 +41,7 @@ Done. The schedule, scores and winners update by themselves every 10 minutes. Th
 - **Who is still alive.** Players who can no longer catch the leader are greyed out.
 - **A Season tab** adds up the whole season: total correct picks, weeks won 🏆 (shared ties count), week-by-week records, best and toughest weeks, and streaks of correct picks. The commissioner can switch each part on or off.
 - **Next week opens on its own** as soon as this week's last game kicks off, so people can pick ahead. The commissioner can choose "this week only" or "the whole season" instead.
+- **Print and export:** print the board, blank pick sheets people fill in by hand, or a tally sheet for running a pool on paper. Download any week or the season as CSV (opens in Excel or Google Sheets) or JSON. See [API.md](API.md) for the read API.
 - **A change log** records every pick change and who made it.
 - **CSV export** of any week.
 
